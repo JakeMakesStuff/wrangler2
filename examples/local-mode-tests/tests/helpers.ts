@@ -65,7 +65,8 @@ export function spawnWranglerDev(
           reject(code);
         }
       });
-      wranglerProcess.kill();
+
+      wranglerProcess.kill("SIGTERM");
     });
   };
 

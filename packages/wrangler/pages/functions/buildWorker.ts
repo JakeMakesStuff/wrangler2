@@ -1,5 +1,7 @@
 import { access, cp, lstat, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import NodeGlobalsPolyfills from "@esbuild-plugins/node-globals-polyfill";
+import NodeModulesPolyfills from "@esbuild-plugins/node-modules-polyfill";
 import { build } from "esbuild";
 import { nanoid } from "nanoid";
 
@@ -12,6 +14,7 @@ type Options = {
   watch?: boolean;
   onEnd?: () => void;
   buildOutputDirectory?: string;
+  nodeCompat?: boolean;
 };
 
 export function buildWorker({
@@ -23,6 +26,7 @@ export function buildWorker({
   watch = false,
   onEnd = () => {},
   buildOutputDirectory,
+  nodeCompat,
 }: Options) {
   return build({
     entryPoints: [resolve(__dirname, "../pages/functions/template-worker.ts")],
@@ -35,9 +39,6 @@ export function buildWorker({
     sourcemap,
     watch,
     allowOverwrite: true,
-    define: {
-      __FALLBACK_SERVICE__: JSON.stringify(fallbackService),
-    },
     plugins: [
       {
         name: "wrangler notifier and monitor",
@@ -133,6 +134,13 @@ export function buildWorker({
           );
         },
       },
+      ...(nodeCompat
+        ? [NodeGlobalsPolyfills({ buffer: true }), NodeModulesPolyfills()]
+        : []),
     ],
+    define: {
+      __FALLBACK_SERVICE__: JSON.stringify(fallbackService),
+      ...(nodeCompat ? { global: "globalThis" } : {}),
+    },
   });
 }
